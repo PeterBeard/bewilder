@@ -1,8 +1,13 @@
 extern crate rand;
 extern crate time;
+extern crate getopts;
 
 use rand::{thread_rng, sample};
+
 use time::get_time;
+
+use getopts::Options;
+
 use std::io::{stdin, BufRead, BufReader};
 use std::fs::File;
 use std::collections::HashMap;
@@ -330,21 +335,35 @@ fn find_all_words(dict: &HashMap<String, Vec<String>>, board: &[char]) -> Vec<(S
 }
 
 /// Show command usage and exit
-fn display_help() {
-    println!("Usage: bewilder [OPTION]");
-    println!("Play a game of Bewilder through the terminal.\n");
-    println!("  -c, --coach         show best possible words after game end");
-    println!("\nSee GitHub for source code and more docs: <https://github.com/PeterBeard/bewilder>");
+fn display_help(program: &str, opts: Options) {
+    let brief = format!("Usage: {} [OPTION]\nPlay a game of Bewilder through the terminal.", program);
+    
+    print!("{}", opts.usage(&brief));
 
-    std::process::exit(0);
+    println!("\nSee GitHub for source code and more docs: <https://github.com/PeterBeard/bewilder>");
 }
 
 fn main() {
     const MAX_TIME: i64 = 180;  // Default time limit is 3 minutes (180 s)
     const DICT_FILE: &'static str = "/usr/share/dict/american-english";
 
-    if env::args().any(|a| a == "--help" || a == "-h") {
-        display_help();
+    // Handle command line args
+    let args: Vec<String> = env::args().collect();
+
+    let mut opts = Options::new();
+    opts.optflag("c", "coach", "show best possible words after game end");
+    opts.optflag("h", "help", "display this help and exit");
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => { m },
+        Err(e) => {
+            panic!("Error parsing args: {}", e.to_string())
+        },
+    };
+
+    if matches.opt_present("h") {
+        display_help(&args[0], opts);
+        std::process::exit(0);
     }
 
     println!("Welcome to Bewilder! Hang on a sec while I load the dictionary...\n");
@@ -392,7 +411,7 @@ fn main() {
 
     display_score(&words, &dict, &board);
 
-    if env::args().any(|a| a == "--coach" || a == "-c") {
+    if matches.opt_present("c") {
         println!("\nLet me see what I can find...");
 
         let all_words = find_all_words(&dict, &board);

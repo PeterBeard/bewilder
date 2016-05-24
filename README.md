@@ -5,7 +5,10 @@
 Usage: bewilder [OPTION]
 Play a game of Bewilder through the terminal.
 
-  -c, --coach         show best possible words after game end
+Options:
+    -c, --coach         show best possible words after game end
+    -d, --dict FILE     use a specific dictionary file
+    -h, --help          display this help and exit
 
 See GitHub for source code and more docs: <https://github.com/PeterBeard/bewilder>
 ```

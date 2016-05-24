@@ -13,6 +13,87 @@ use std::fs::File;
 use std::collections::HashMap;
 use std::env;
 
+
+/// A Board has some (square) number of letter dice, usually 16, 25, or 36
+#[derive(Clone, Debug)]
+struct Board {
+    squares: Vec<Die>,
+}
+
+impl Board {
+    /// Create a new (empty) board
+    pub fn new() -> Board {
+        Board {
+            squares: Vec::new(),
+        }
+    }
+
+    /// Create a new board with the given dice
+    pub fn with_dice(dice: Vec<Die>) -> Board {
+        Board {
+            squares: dice,
+        }
+    }
+
+    /// Get the value at a particular position
+    pub fn at(&self, pos: usize) -> char {
+        self.squares[pos].value
+    }
+
+    /// Get the number of squares in this board
+    pub fn len(&self) -> usize {
+        self.squares.len()
+    }
+
+    /// Get the dimension of this board
+    /// Returns the square root of the total length
+    pub fn dim(&self) -> usize {
+        (self.squares.len() as f32).sqrt() as usize
+    }
+
+    /// Shuffle the board
+    pub fn shuffle(&mut self) {
+        let mut rng = thread_rng();
+
+        // Roll a die for each square
+        for d in &mut self.squares {
+            d.roll()
+        }
+
+        // Then shuffle the squares
+        for i in 0..self.squares.len() {
+            let j: usize = sample(&mut rng, 0..self.squares.len(), 1)[0];
+            let tmp = self.squares[i].clone();
+            self.squares[i] = self.squares[j].clone();
+            self.squares[j] = tmp;
+        }
+    }
+}
+
+/// A Die has six letters, one on each face
+#[derive(Clone, Debug)]
+struct Die {
+    letters: [char; 6],
+    value: char,
+}
+
+impl Die {
+    /// Create a new Die with the given letters
+    pub fn new(letters: [char; 6]) -> Die {
+        Die {
+            letters: letters,
+            value: '0',
+        }
+    }
+
+    /// Roll this die
+    pub fn roll(&mut self) {
+        let mut rng = thread_rng();
+
+        self.value = *sample(&mut rng, self.letters.iter(), 1)[0];
+    }
+}
+
 /// Load a dictionary file into a useful structure
 ///
 /// The resulting HashMap maps sorted strings to all of the words that contain those letters
@@ -57,48 +138,67 @@ fn sort_word(word: &str) -> String {
     sorted.into_iter().collect()
 }
 
-/// Generate a board using 16 letter dice
-fn generate_board() -> [char; 16] {
-    let mut rng = thread_rng();
-
-    let dice = [
-        ['A', 'A', 'C', 'I', 'O', 'T'],
-        ['A', 'B', 'I', 'L', 'T', 'Y'],
-        ['A', 'B', 'J', 'M', 'O', 'Q'],
-        ['A', 'C', 'D', 'E', 'M', 'P'],
-        ['A', 'C', 'E', 'L', 'R', 'S'],
-        ['A', 'D', 'E', 'N', 'V', 'Z'],
-        ['A', 'H', 'M', 'O', 'R', 'S'],
-        ['B', 'I', 'F', 'O', 'R', 'X'],
-        ['D', 'E', 'N', 'O', 'S', 'W'],
-        ['D', 'K', 'N', 'O', 'T', 'U'],
-        ['E', 'E', 'F', 'H', 'I', 'Y'],
-        ['E', 'G', 'K', 'L', 'U', 'Y'],
-        ['E', 'G', 'I', 'N', 'T', 'V'],
-        ['E', 'H', 'I', 'N', 'P', 'S'],
-        ['E', 'L', 'P', 'S', 'T', 'U'],
-        ['G', 'I', 'L', 'R', 'U', 'W']
+/// Generate a 4x4 board
+fn generate_board_4x4() -> Board {
+    let dice: Vec<Die> = vec![
+        Die::new(['A', 'A', 'C', 'I', 'O', 'T']),
+        Die::new(['A', 'B', 'I', 'L', 'T', 'Y']),
+        Die::new(['A', 'B', 'J', 'M', 'O', 'Q']),
+        Die::new(['A', 'C', 'D', 'E', 'M', 'P']),
+        Die::new(['A', 'C', 'E', 'L', 'R', 'S']),
+        Die::new(['A', 'D', 'E', 'N', 'V', 'Z']),
+        Die::new(['A', 'H', 'M', 'O', 'R', 'S']),
+        Die::new(['B', 'I', 'F', 'O', 'R', 'X']),
+        Die::new(['D', 'E', 'N', 'O', 'S', 'W']),
+        Die::new(['D', 'K', 'N', 'O', 'T', 'U']),
+        Die::new(['E', 'E', 'F', 'H', 'I', 'Y']),
+        Die::new(['E', 'G', 'K', 'L', 'U', 'Y']),
+        Die::new(['E', 'G', 'I', 'N', 'T', 'V']),
+        Die::new(['E', 'H', 'I', 'N', 'P', 'S']),
+        Die::new(['E', 'L', 'P', 'S', 'T', 'U']),
+        Die::new(['G', 'I', 'L', 'R', 'U', 'W'])
     ];
-    let mut board: [char; 16] = ['1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1'];
+    let mut board = Board::with_dice(dice);
+    board.shuffle();
+    board
+}
 
-    // Roll a die for each square
-    for i in 0..16 {
-        board[i] = *sample(&mut rng, dice[i].iter(), 1)[0];
-    }
-
-    // Then shuffle the squares
-    for i in 0..16 {
-        let j: usize = sample(&mut rng, 0..16, 1)[0];
-        let tmp = board[i];
-        board[i] = board[j];
-        board[j] = tmp;
-    }
-
+/// Generate a 5x5 board
+fn generate_board_5x5() -> Board {
+    let dice: Vec<Die> = vec![
+        Die::new(['A', 'A', 'A', 'F', 'R', 'S']),
+        Die::new(['A', 'A', 'E', 'E', 'E', 'E']),
+        Die::new(['A', 'A', 'F', 'I', 'R', 'S']),
+        Die::new(['A', 'D', 'E', 'N', 'N', 'N']),
+        Die::new(['A', 'E', 'E', 'E', 'E', 'M']),
+        Die::new(['A', 'E', 'E', 'G', 'M', 'U']),
+        Die::new(['A', 'E', 'G', 'M', 'N', 'N']),
+        Die::new(['A', 'F', 'I', 'R', 'S', 'Y']),
+        Die::new(['B', 'J', 'K', 'Q', 'X', 'Z']),
+        Die::new(['C', 'C', 'E', 'N', 'S', 'T']),
+        Die::new(['C', 'E', 'I', 'I', 'L', 'T']),
+        Die::new(['C', 'E', 'I', 'L', 'P', 'T']),
+        Die::new(['C', 'E', 'I', 'P', 'S', 'T']),
+        Die::new(['D', 'D', 'H', 'N', 'O', 'T']),
+        Die::new(['D', 'H', 'H', 'L', 'O', 'R']),
+        Die::new(['D', 'H', 'L', 'N', 'O', 'R']),
+        Die::new(['D', 'H', 'L', 'N', 'O', 'R']),
+        Die::new(['E', 'I', 'I', 'I', 'T', 'T']),
+        Die::new(['E', 'M', 'O', 'T', 'T', 'T']),
+        Die::new(['E', 'N', 'S', 'S', 'S', 'U']),
+        Die::new(['F', 'I', 'P', 'R', 'S', 'Y']),
+        Die::new(['G', 'O', 'R', 'R', 'V', 'W']),
+        Die::new(['I', 'P', 'R', 'R', 'R', 'Y']),
+        Die::new(['N', 'O', 'O', 'T', 'U', 'W']),
+        Die::new(['O', 'O', 'O', 'T', 'T', 'U']),
+    ];
+    let mut board = Board::with_dice(dice);
+    board.shuffle();
     board
 }
 
 /// Display a board
-fn display_board(board: &[char]) {
+fn display_board(board: &Board) {
     // Box drawing characters
     const TL: char = '\u{250f}';
     const TR: char = '\u{2513}';
@@ -112,8 +212,11 @@ fn display_board(board: &[char]) {
     const VLEFT: char = '\u{252b}';
     const CROSS: char = '\u{254b}';
 
+    let dim = board.dim();
+    let width = dim * 5 - 1;
+
     print!("{}", TL);
-    for i in 0..19 {
+    for i in 0..width {
         if i % 5 == 4 {
             print!("{}", HLINE);
         } else {
@@ -122,18 +225,18 @@ fn display_board(board: &[char]) {
     }
     println!("{}", TR);
 
-    for i in 0..16 {
+    for i in 0..board.len() {
         print!("{}", VLINE);
-        if board[i] == 'Q' {
+        if board.at(i) == 'Q' {
             print!(" Qu ");
         } else {
-            print!(" {}  ", board[i]);
+            print!(" {}  ", board.at(i));
         }
-        if i % 4 == 3 {
+        if i % dim == (dim - 1) {
             println!("{}", VLINE);
-            if i < 15 {
+            if i < board.len() - 1 {
                 print!("{}", VRIGHT);
-                for i in 0..19 {
+                for i in 0..width {
                     if i % 5 == 4 {
                         print!("{}", CROSS);
                     } else {
@@ -146,7 +249,7 @@ fn display_board(board: &[char]) {
     }
     
     print!("{}", BL);
-    for i in 0..19 {
+    for i in 0..width {
         if i % 5 == 4 {
             print!("{}", HUP);
         } else {
@@ -157,7 +260,7 @@ fn display_board(board: &[char]) {
 }
 
 /// Display a nice little scoreboard at the end of a game
-fn display_score(words: &Vec<String>, dict: &HashMap<String, Vec<String>>, board: &[char]) {
+fn display_score(words: &Vec<String>, dict: &HashMap<String, Vec<String>>, board: &Board) {
     // Calculate the scores and sort the words from highest to lowest score
     let mut scored_words: Vec<(&str, u32)> = Vec::with_capacity(words.len());
     for w in words {
@@ -225,7 +328,7 @@ fn score_word(word: &str) -> u32 {
 }
 
 /// Determine whether a word is valid
-fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &[char]) -> bool {
+fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &Board) -> bool {
     // First normalize the word by converting to upper case and replacing "QU" with "Q"
     let word = word.to_uppercase().replace("QU", "Q");
     
@@ -240,8 +343,8 @@ fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &[char]
     }
     
     // Now try to find the word on the board
-    let mut visited = [false; 16];
-    for pos in 0..16 {
+    let mut visited: Vec<bool> = vec![false; board.len()];
+    for pos in 0..board.len()-1 {
         if word_continues_from(pos, &mut visited, 0, board, &word) {
             return true;
         }
@@ -251,14 +354,14 @@ fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &[char]
 }
 
 /// Determine whether a word continues from a given point
-fn word_continues_from(pos: usize, visited: &mut [bool], curr_ch: usize, board: &[char], word: &str) -> bool {
+fn word_continues_from(pos: usize, visited: &mut [bool], curr_ch: usize, board: &Board, word: &str) -> bool {
     // If we made it past the end of the word, we're done
     if curr_ch >= word.len() {
         return true;
     }
 
     let chars: Vec<char> = word.chars().collect();
-    if board[pos] == chars[curr_ch] {
+    if board.at(pos) == chars[curr_ch] {
         // Check all the neighbors (except the square we came from) to see if
         // any of them contains the next letter
         visited[pos] = true;
@@ -312,7 +415,7 @@ fn get_neighbor_positions(pos: usize) -> Vec<usize> {
 }
 
 /// Search the board for all possible words
-fn find_all_words(dict: &HashMap<String, Vec<String>>, board: &[char]) -> Vec<(String, u32)> {
+fn find_all_words(dict: &HashMap<String, Vec<String>>, board: &Board) -> Vec<(String, u32)> {
     let mut found: Vec<(String, u32)> = Vec::new();
     for words in dict.values() {
         for w in words {
@@ -334,7 +437,7 @@ fn find_all_words(dict: &HashMap<String, Vec<String>>, board: &[char]) -> Vec<(S
     found
 }
 
-/// Show command usage and exit
+/// Show command usage
 fn display_help(program: &str, opts: Options) {
     let brief = format!("Usage: {} [OPTION]\nPlay a game of Bewilder through the terminal.", program);
     
@@ -353,6 +456,7 @@ fn main() {
     let mut opts = Options::new();
     opts.optflag("c", "coach", "show best possible words after game end");
     opts.optopt("d", "dict", "use a specific dictionary file", "FILE");
+    opts.optopt("n", "numsquares", "generate an N by N board (default 4)", "N");
     opts.optflag("h", "help", "display this help and exit");
 
     let matches = match opts.parse(&args[1..]) {
@@ -376,7 +480,21 @@ fn main() {
 
     let dict = load_dictionary(&dict_file);
 
-    let board = generate_board();
+    let board = match matches.opt_str("n") {
+        Some(n) => {
+            if n == "4" {
+                generate_board_4x4()
+            } else if n == "5" {
+                generate_board_5x5()
+            } else {
+                panic!("Invalid board size.");
+            }
+        },
+        None => {
+            generate_board_4x4()
+        },
+    };
+
     display_board(&board);
 
     // Let the player enter words for until MAX_TIME

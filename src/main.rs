@@ -234,8 +234,9 @@ fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &[char]
     }
     
     // Now try to find the word on the board
+    let mut visited = [false; 16];
     for pos in 0..16 {
-        if word_continues_from(pos, pos, 0, board, &word) {
+        if word_continues_from(pos, &mut visited, 0, board, &word) {
             return true;
         }
     }
@@ -244,7 +245,7 @@ fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &[char]
 }
 
 /// Determine whether a word continues from a given point
-fn word_continues_from(pos: usize, prev: usize, curr_ch: usize, board: &[char], word: &str) -> bool {
+fn word_continues_from(pos: usize, visited: &mut [bool], curr_ch: usize, board: &[char], word: &str) -> bool {
     // If we made it past the end of the word, we're done
     if curr_ch >= word.len() {
         return true;
@@ -254,9 +255,10 @@ fn word_continues_from(pos: usize, prev: usize, curr_ch: usize, board: &[char], 
     if board[pos] == chars[curr_ch] {
         // Check all the neighbors (except the square we came from) to see if
         // any of them contains the next letter
+        visited[pos] = true;
         let neighbors = get_neighbor_positions(pos);
         for npos in neighbors {
-            if npos != prev && word_continues_from(npos, pos, curr_ch+1, board, word) {
+            if !visited[npos] && word_continues_from(npos, visited, curr_ch+1, board, word) {
                 return true;
             }
         }
@@ -305,6 +307,8 @@ fn get_neighbor_positions(pos: usize) -> Vec<usize> {
 fn main() {
     const MAX_TIME: i64 = 180;  // Default time limit is 3 minutes (180 s)
     const DICT_FILE: &'static str = "/usr/share/dict/american-english";
+
+    println!("Welcome to Bewilder! Hang on a sec while I load the dictionary...\n");
 
     let dict = load_dictionary(DICT_FILE);
 

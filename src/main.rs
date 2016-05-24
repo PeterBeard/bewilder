@@ -6,6 +6,7 @@ use time::get_time;
 use std::io::{stdin, BufRead, BufReader};
 use std::fs::File;
 use std::collections::HashMap;
+use std::env;
 
 /// Load a dictionary file into a useful structure
 ///
@@ -263,6 +264,7 @@ fn word_continues_from(pos: usize, visited: &mut [bool], curr_ch: usize, board: 
             }
         }
     }
+    visited[pos] = false;
 
     false
 }
@@ -304,9 +306,46 @@ fn get_neighbor_positions(pos: usize) -> Vec<usize> {
     neighbors
 }
 
+/// Search the board for all possible words
+fn find_all_words(dict: &HashMap<String, Vec<String>>, board: &[char]) -> Vec<(String, u32)> {
+    let mut found: Vec<(String, u32)> = Vec::new();
+    for words in dict.values() {
+        for w in words {
+            let s = score_word(w);
+            if s > 0 && !found.contains(&(w.to_string(), s)) && is_valid_word(&w, dict, board) {
+                found.push((w.to_string(), s));
+            }
+        }
+    }
+    
+    // Sort the words by score
+    found.sort_by(|&(ref wa, a), &(ref wb, b)| {
+        if a == b {
+            wa.cmp(&wb)
+        } else {
+            b.cmp(&a)
+        }
+    });
+    found
+}
+
+/// Show command usage and exit
+fn display_help() {
+    println!("Usage: bewilder [OPTION]");
+    println!("Play a game of Bewilder through the terminal.\n");
+    println!("  -c, --coach         show best possible words after game end");
+    println!("\nSee GitHub for source code and more docs: <https://github.com/PeterBeard/bewilder>");
+
+    std::process::exit(0);
+}
+
 fn main() {
     const MAX_TIME: i64 = 180;  // Default time limit is 3 minutes (180 s)
     const DICT_FILE: &'static str = "/usr/share/dict/american-english";
+
+    if env::args().any(|a| a == "--help" || a == "-h") {
+        display_help();
+    }
 
     println!("Welcome to Bewilder! Hang on a sec while I load the dictionary...\n");
 
@@ -352,4 +391,17 @@ fn main() {
     }
 
     display_score(&words, &dict, &board);
+
+    if env::args().any(|a| a == "--coach" || a == "-c") {
+        println!("\nLet me see what I can find...");
+
+        let all_words = find_all_words(&dict, &board);
+        println!("Here are the best words on this board:\n");
+
+        for (w, s) in all_words {
+            if s > 1 {
+                println!("{:>16} : {:<16}", w, s);
+            }
+        }
+    }
 }

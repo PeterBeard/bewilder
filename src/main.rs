@@ -152,6 +152,24 @@ fn display_board(board: &[char]) {
 
 /// Display a nice little scoreboard at the end of a game
 fn display_score(words: &Vec<String>, dict: &HashMap<String, Vec<String>>, board: &[char]) {
+    // Calculate the scores and sort the words from highest to lowest score
+    let mut scored_words: Vec<(&str, u32)> = Vec::with_capacity(words.len());
+    for w in words {
+        let s = score_word(&w);
+        if s > 0 && is_valid_word(&w, &dict, &board) {
+            scored_words.push((w, s));
+        }
+    }
+    let total = scored_words.iter().fold(0u32, |sum, &(_, s)| { sum + s });
+    scored_words.sort_by(|&(wa, a), &(wb, b)| {
+        if a == b {
+            wa.cmp(&wb)
+        } else {
+            b.cmp(&a)
+        }
+    });
+
+
     println!("");
     print!("\u{250c}");
     for _ in 0..11 {
@@ -164,13 +182,8 @@ fn display_score(words: &Vec<String>, dict: &HashMap<String, Vec<String>>, board
     println!("\u{2510}");
     println!("\u{2502}                                     \u{2502}");
 
-    let mut total = 0;
-    for w in words {
-        let s = score_word(&w);
-        if s > 0 && is_valid_word(&w, &dict, &board) {
-            println!("\u{2502} {:>16} : {:<16} \u{2502}", w, s);
-            total += s;
-        }
+    for (w, s) in scored_words {
+        println!("\u{2502} {:>16} : {:<16} \u{2502}", w, s);
     }
 
     println!("\u{2502}                                     \u{2502}");

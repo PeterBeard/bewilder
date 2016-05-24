@@ -345,13 +345,14 @@ fn display_help(program: &str, opts: Options) {
 
 fn main() {
     const MAX_TIME: i64 = 180;  // Default time limit is 3 minutes (180 s)
-    const DICT_FILE: &'static str = "/usr/share/dict/american-english";
+    const DEFAULT_DICT: &'static str = "/usr/share/dict/american-english";
 
     // Handle command line args
     let args: Vec<String> = env::args().collect();
 
     let mut opts = Options::new();
     opts.optflag("c", "coach", "show best possible words after game end");
+    opts.optopt("d", "dict", "use a specific dictionary file", "FILE");
     opts.optflag("h", "help", "display this help and exit");
 
     let matches = match opts.parse(&args[1..]) {
@@ -368,7 +369,12 @@ fn main() {
 
     println!("Welcome to Bewilder! Hang on a sec while I load the dictionary...\n");
 
-    let dict = load_dictionary(DICT_FILE);
+    let dict_file = match matches.opt_str("d") {
+        Some(f) => { f },
+        None => { DEFAULT_DICT.to_string() },
+    };
+
+    let dict = load_dictionary(&dict_file);
 
     let board = generate_board();
     display_board(&board);

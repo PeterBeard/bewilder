@@ -8,7 +8,7 @@ use time::get_time;
 
 use getopts::Options;
 
-use std::io::{stdin, BufRead, BufReader};
+use std::io::{stdin, stdout, Write, BufRead, BufReader};
 use std::fs::File;
 use std::collections::HashMap;
 use std::env;
@@ -512,8 +512,12 @@ fn main() {
     let mut words: Vec<String> = Vec::new();
     println!("You have {} seconds to find as many words as you can! Type QQ to give up.", MAX_TIME);
     loop {
-        let mut input = String::new();
+        let remaining = MAX_TIME - (get_time().sec - start);
+        println!("({} seconds left)", remaining);
+        print!("> ");
+        stdout().flush().unwrap();
 
+        let mut input = String::new();
         match stdin().read_line(&mut input) {
             Ok(_) => {
                 let remaining = MAX_TIME - (get_time().sec - start);
@@ -527,9 +531,6 @@ fn main() {
                         words.push(w);
                     } else {
                         println!("Already found {}", w);
-                    }
-                    if remaining % 10 == 0 {
-                        println!("{} seconds remaining.", remaining);
                     }
                 }
             },

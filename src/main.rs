@@ -112,7 +112,7 @@ fn load_dictionary(filename: &str) -> HashMap<String, Vec<String>> {
                 if n == 0 {
                     break;
                 }
-                word = word.trim().to_uppercase();
+                word = normalize_word(word.trim());
                 let sorted = sort_word(&word);
                 if dict.contains_key(&sorted) {
                     let mut words: &mut Vec<String> = dict.get_mut(&sorted).unwrap();
@@ -292,7 +292,7 @@ fn display_score(words: &Vec<String>, dict: &HashMap<String, Vec<String>>, board
     println!("\u{2502}                                     \u{2502}");
 
     for (w, s) in scored_words {
-        println!("\u{2502} {:>16} : {:<16} \u{2502}", w, s);
+        println!("\u{2502} {:>16} : {:<16} \u{2502}", denormalize_word(w), s);
     }
 
     println!("\u{2502}                                     \u{2502}");
@@ -327,10 +327,19 @@ fn score_word(word: &str) -> u32 {
     }
 }
 
+/// Normalize a word by capitalizing and replacing QU with Q
+fn normalize_word(word: &str) -> String {
+    word.to_uppercase().replace("QU", "Q")
+}
+
+/// Denormalize a word by replacing q with qu
+fn denormalize_word(word: &str) -> String {
+    word.replace("Q", "QU")
+}
+
 /// Determine whether a word is valid
 fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &Board) -> bool {
-    // First normalize the word by converting to upper case and replacing "QU" with "Q"
-    let word = word.to_uppercase().replace("QU", "Q");
+    let word = normalize_word(word);
     
     // Next make sure that the word is in the dictionary
     let sorted_w = sort_word(&word);
@@ -343,8 +352,8 @@ fn is_valid_word(word: &str, dict: &HashMap<String, Vec<String>>, board: &Board)
     }
     
     // Now try to find the word on the board
-    let mut visited: Vec<bool> = vec![false; board.len()];
     for pos in 0..board.len()-1 {
+        let mut visited: Vec<bool> = vec![false; board.len()];
         if word_continues_from(pos, &mut visited, 0, board, &word) {
             return true;
         }
@@ -365,9 +374,10 @@ fn word_continues_from(pos: usize, visited: &mut [bool], curr_ch: usize, board: 
         // Check all the neighbors (except the square we came from) to see if
         // any of them contains the next letter
         visited[pos] = true;
-        let neighbors = get_neighbor_positions(pos);
+        let neighbors = get_neighbor_positions(pos, board.dim());
         for npos in neighbors {
             if !visited[npos] && word_continues_from(npos, visited, curr_ch+1, board, word) {
+                visited[npos] = true;
                 return true;
             }
         }
@@ -380,35 +390,35 @@ fn word_continues_from(pos: usize, visited: &mut [bool], curr_ch: usize, board: 
 /// Get all of the squares that neighbor the given square
 ///
 /// Returns a vec of the positions of the neighbors
-fn get_neighbor_positions(pos: usize) -> Vec<usize> {
+fn get_neighbor_positions(pos: usize, dim: usize) -> Vec<usize> {
     // Convert the position to x, y coordinates
-    let x = pos % 4;
-    let y = pos / 4;
+    let x = pos % dim;
+    let y = pos / dim;
 
     let mut neighbors: Vec<usize> = Vec::new();
     if y > 0 {
-        neighbors.push(pos-4);
+        neighbors.push(pos-dim);
     }
     if y < 3 {
-        neighbors.push(pos+4);
+        neighbors.push(pos+dim);
     }
 
     if x > 0 {
         neighbors.push(pos-1);
         if y > 0 {
-            neighbors.push(pos-5);
+            neighbors.push(pos-dim-1);
         }
         if y < 3 {
-            neighbors.push(pos+3);
+            neighbors.push(pos+dim-1);
         }
     }
     if x < 3 {
         neighbors.push(pos+1);
         if y > 0 {
-            neighbors.push(pos-3);
+            neighbors.push(pos-dim+1);
         }
         if y < 3 {
-            neighbors.push(pos+5);
+            neighbors.push(pos+dim+1);
         }
     }
     neighbors
@@ -543,7 +553,7 @@ fn main() {
 
         for (w, s) in all_words {
             if s > 1 {
-                println!("{:>16} : {:<16}", w, s);
+                println!("{:>16} : {:<16}", denormalize_word(&w), s);
             }
         }
     }
